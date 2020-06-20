@@ -11,7 +11,7 @@
             [clojure.java.io :as io]
             [clojure.set]
             [clojure.string :as string]
-            [datomic.codeq.util :refer [index->id-fn tempid?]]
+            [datomic.codeq.util :refer [index->id-fn tempid?] :as util]
             [datomic.codeq.analyzer :as az]
             [datomic.codeq.analyzers.clj])
   (:import java.util.Date)
@@ -540,10 +540,14 @@
   (shutdown-agents)
   (System/exit 0))
 
+(defn foo
+  [x y]
+  {::util/foo (+ x y)})
+
 
 (comment
 (def uri "datomic:mem://git")
-;;(def uri "datomic:free://localhost:4334/git")
+(def uri "datomic:free://localhost:4334/test4")
 (datomic.codeq.core/main uri "c3bd979cfe65da35253b25cb62aad4271430405c")
 (datomic.codeq.core/main uri  "20f8db11804afc8c5a1752257d5fdfcc2d131d08")
 (datomic.codeq.core/main uri)
@@ -581,4 +585,18 @@
                                      :codeq/file f
                                      :tx/analyzer aname
                                      :tx/analyzerRev arev}))))")
+
+(def f (d/q '[:find ?f .
+              :where
+              [?f :file/name "core.clj"]] db))
+
+(az/analyze
+  (first analyzers)
+  (d/db conn)
+  f
+  y)
+
+(import-git conn repo-uri repo-name (unimported-commits (d/db conn) nil))
+
+(run-analyzers conn)
 )
