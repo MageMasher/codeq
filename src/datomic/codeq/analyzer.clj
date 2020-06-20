@@ -20,7 +20,7 @@
   (analyze [a db f src] "f is file entityid, src is string, returns tx-data"))
 
 (defn sha
-  "Returns the hex string of the sha1 of s"
+  "Returns the hex string of the sha256 of s"
   [^String s]
   (DigestUtils/sha256Hex s))
 
