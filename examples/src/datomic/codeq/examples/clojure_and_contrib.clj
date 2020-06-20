@@ -1,5 +1,5 @@
 (ns datomic.codeq.examples.clojure-and-contrib
-  (:require [datomic.api :as d :refer [q]]
+  (:require [datomic.client.api :as d :refer [q]]
             [clojure.pprint :refer [pprint]]))
 
 (defn -main [& [database-uri]]

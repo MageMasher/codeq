@@ -7,21 +7,33 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns datomic.codeq.util
-  (:require [datomic.api :as d]))
+  (:require [datomic.client.api :as d]))
 
 (set! *warn-on-reflection* true)
 
 (defn index-get-id
   [db attr v]
-  (let [d (first (d/index-range db attr v nil))]
+  (let [d (first (d/index-range db {:attrid attr
+                                    :start  v}))]
     (when (and d (= (:v d) v))
       (:e d))))
+
+(defn tempid
+  [prefix]
+  (str (gensym (str "tempid-" prefix))))
 
 (defn index->id-fn
   [db attr]
   (memoize
    (fn [x]
      (or (index-get-id db attr x)
-         (d/tempid :db.part/user)))))
+         (tempid :db.part/user)))))
 
-(def tempid? map?)
+(def tempid? string? )
+
+(defn entid
+  [db ident]
+  (ffirst (d/q '[:find ?e
+                 :in $ ?ident
+                 :where [?e :db/ident ?ident]]
+               db ident)))

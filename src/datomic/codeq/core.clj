@@ -7,7 +7,7 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns datomic.codeq.core
-  (:require [datomic.api :as d]
+  (:require [datomic.client.api :as d]
             [clojure.java.io :as io]
             [clojure.set]
             [clojure.string :as string]
@@ -22,232 +22,190 @@
 (def schema
      [
       ;;tx attrs
-      {:db/id #db/id[:db.part/db]
-       :db/ident :tx/commit
+      {:db/ident :tx/commit
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "Associate tx with this git commit"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Associate tx with this git commit"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :tx/file
+      {:db/ident :tx/file
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "Associate tx with this git blob"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Associate tx with this git blob"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :tx/analyzer
+      {:db/ident :tx/analyzer
        :db/valueType :db.type/keyword
        :db/cardinality :db.cardinality/one
-       :db/index true
-       :db/doc "Associate tx with this analyzer"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Associate tx with this analyzer"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :tx/analyzerRev
+      {:db/ident :tx/analyzerRev
        :db/valueType :db.type/long
        :db/cardinality :db.cardinality/one
-       :db/doc "Associate tx with this analyzer revision"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Associate tx with this analyzer revision"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :tx/op
+      {:db/ident :tx/op
        :db/valueType :db.type/keyword
-       :db/index true
        :db/cardinality :db.cardinality/one
-       :db/doc "Associate tx with this operation - one of :import, :analyze"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Associate tx with this operation - one of :import, :analyze"}
 
       ;;git stuff
-      {:db/id #db/id[:db.part/db]
-       :db/ident :git/type
+      {:db/ident :git/type
        :db/valueType :db.type/keyword
        :db/cardinality :db.cardinality/one
-       :db/index true
-       :db/doc "Type enum for git objects - one of :commit, :tree, :blob, :tag"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Type enum for git objects - one of :commit, :tree, :blob, :tag"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :git/sha
+      {:db/ident :git/sha
        :db/valueType :db.type/string
        :db/cardinality :db.cardinality/one
        :db/doc "A git sha, should be in repo"
-       :db/unique :db.unique/identity
-       :db.install/_attribute :db.part/db}
+       :db/unique :db.unique/identity}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :repo/commits
+      {:db/ident :repo/commits
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/many
-       :db/doc "Associate repo with these git commits"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Associate repo with these git commits"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :repo/uri
+      {:db/ident :repo/uri
        :db/valueType :db.type/string
        :db/cardinality :db.cardinality/one
        :db/doc "A git repo uri"
-       :db/unique :db.unique/identity
-       :db.install/_attribute :db.part/db}
+       :db/unique :db.unique/identity}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :commit/parents
+      {:db/ident :commit/parents
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/many
-       :db/doc "Parents of a commit"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Parents of a commit"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :commit/tree
+      {:db/ident :commit/tree
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "Root node of a commit"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Root node of a commit"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :commit/message
+      {:db/ident :commit/message
        :db/valueType :db.type/string
        :db/cardinality :db.cardinality/one
-       :db/doc "A commit message"
-       :db/fulltext true
-       :db.install/_attribute :db.part/db}
+       :db/doc "A commit message"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :commit/author
+      {:db/ident :commit/author
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "Person who authored a commit"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Person who authored a commit"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :commit/authoredAt
+      {:db/ident :commit/authoredAt
        :db/valueType :db.type/instant
        :db/cardinality :db.cardinality/one
-       :db/doc "Timestamp of authorship of commit"
-       :db/index true
-       :db.install/_attribute :db.part/db}
+       :db/doc "Timestamp of authorship of commit"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :commit/committer
+      {:db/ident :commit/committer
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "Person who committed a commit"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Person who committed a commit"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :commit/committedAt
+      {:db/ident :commit/committedAt
        :db/valueType :db.type/instant
        :db/cardinality :db.cardinality/one
-       :db/doc "Timestamp of commit"
-       :db/index true
-       :db.install/_attribute :db.part/db}
+       :db/doc "Timestamp of commit"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :tree/nodes
+      {:db/ident :tree/nodes
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/many
-       :db/doc "Nodes of a git tree"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Nodes of a git tree"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :node/filename
+      {:db/ident :node/filename
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "filename of a tree node"
-       :db.install/_attribute :db.part/db}
+       :db/doc "filename of a tree node"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :node/paths
+      {:db/ident :node/paths
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/many
-       :db/doc "paths of a tree node"
-       :db.install/_attribute :db.part/db}
+       :db/doc "paths of a tree node"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :node/object
+      {:db/ident :node/object
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "Git object (tree/blob) in a tree node"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Git object (tree/blob) in a tree node"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :git/prior
+      {:db/ident :git/prior
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "Node containing prior value of a git object"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Node containing prior value of a git object"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :email/address
+      {:db/ident :email/address
        :db/valueType :db.type/string
        :db/cardinality :db.cardinality/one
        :db/doc "An email address"
-       :db/unique :db.unique/identity
-       :db.install/_attribute :db.part/db}
+       :db/unique :db.unique/identity}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :file/name
+      {:db/ident :file/name
        :db/valueType :db.type/string
        :db/cardinality :db.cardinality/one
        :db/doc "A filename"
-       :db/fulltext true
-       :db/unique :db.unique/identity
-       :db.install/_attribute :db.part/db}
+       :db/unique :db.unique/identity}
 
       ;;codeq stuff
-      {:db/id #db/id[:db.part/db]
-       :db/ident :codeq/file
+      {:db/ident :codeq/file
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "Git file containing codeq"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Git file containing codeq"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :codeq/loc
+      ;TODO: Make loc a tuple? maybe [file line col endline endcol] [ref int int int int]
+      {:db/ident :codeq/loc
        :db/valueType :db.type/string
        :db/cardinality :db.cardinality/one
-       :db/doc "Location of codeq in file. A location string in format \"line col endline endcol\", one-based"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Location of codeq in file. A location string in format \"line col endline endcol\", one-based"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :codeq/parent
+      {:db/ident :codeq/loc+line
+       :db/valueType :db.type/long
+       :db/cardinality :db.cardinality/one
+       :db/doc "The \"line\" Part of the location of codeq in file. The \"line\" part of the location string in format \"line col endline endcol\", one-based"}
+
+      {:db/ident :codeq/loc+col
+       :db/valueType :db.type/long
+       :db/cardinality :db.cardinality/one
+       :db/doc "The \"col\" Part of the location of codeq in file. The \"col\" part of the location string in format \"line col endline endcol\", one-based"}
+
+      {:db/ident :codeq/loc+endline
+       :db/valueType :db.type/long
+       :db/cardinality :db.cardinality/one
+       :db/doc "The \"endline\" Part of the location of codeq in file. The \"endline\" part of the location string in format \"line col endline endcol\", one-based"}
+
+      {:db/ident :codeq/loc+endcol
+       :db/valueType :db.type/long
+       :db/cardinality :db.cardinality/one
+       :db/doc "The \"endcol\" Part of the location of codeq in file. The \"endcol\" part of the location string in format \"line col endline endcol\", one-based"}
+
+      {:db/ident       :codeq/file+loc
+       :db/valueType   :db.type/tuple
+       :db/tupleAttrs  [:codeq/file :codeq/loc+line :codeq/loc+col :codeq/loc+endline :codeq/loc+endcol]
+       :db/cardinality :db.cardinality/one
+       :db/unique      :db.unique/identity}
+
+      {:db/ident :codeq/parent
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "Parent (containing) codeq of codeq (if one)"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Parent (containing) codeq of codeq (if one)"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :codeq/code
+      {:db/ident :codeq/code
        :db/valueType :db.type/ref
        :db/cardinality :db.cardinality/one
-       :db/doc "Code entity of codeq"
-       :db.install/_attribute :db.part/db}
+       :db/doc "Code entity of codeq"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :code/sha
+      {:db/ident :code/sha
        :db/valueType :db.type/string
        :db/cardinality :db.cardinality/one
        :db/doc "SHA of whitespace-minified code segment text: consecutive ws becomes a single space, then trim. ws-sensitive langs don't minify."
-       :db/unique :db.unique/identity
-       :db.install/_attribute :db.part/db}
+       :db/unique :db.unique/identity}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :code/text
+      {:db/ident :code/text
        :db/valueType :db.type/string
        :db/cardinality :db.cardinality/one
-       :db/doc "The source code for a code segment"
-       ;;:db/fulltext true
-       :db.install/_attribute :db.part/db}
+       :db/doc "The source code for a code segment"}
 
-      {:db/id #db/id[:db.part/db]
-       :db/ident :code/name
+      {:db/ident :code/name
        :db/valueType :db.type/string
        :db/cardinality :db.cardinality/one
        :db/doc "A globally-namespaced programming language identifier"
-       :db/fulltext true
-       :db/unique :db.unique/identity
-       :db.install/_attribute :db.part/db}
+       :db/unique :db.unique/identity}
       ])
 
 (defn ^java.io.Reader exec-stream
@@ -258,8 +216,8 @@
       io/reader))
 
 (defn ensure-schema [conn]
-  (or (-> conn d/db (d/entid :tx/commit))
-      @(d/transact conn schema)))
+  (or (-> conn d/db (util/entid :tx/commit))
+      (d/transact conn {:tx-data schema})))
 
 ;;example commit - git cat-file -p
 ;;tree d81cd432f2050c84a3d742caa35ccb8298d51e9d
@@ -350,13 +308,12 @@
 
 (defn commit-tx-data
   [db repo repo-name {:keys [sha msg tree parents author authored committer committed] :as commit}]
-  (let [tempid? map? ;;todo - better pred
-        sha->id (index->id-fn db :git/sha)
+  (let [sha->id (index->id-fn db :git/sha)
         email->id (index->id-fn db :email/address)
         filename->id (index->id-fn db :file/name)
         authorid (email->id author)
         committerid (email->id committer)
-        cid (d/tempid :db.part/user)
+        cid (util/tempid :db.part/user)
         tx-data (fn f [inpath [sha type filename]]
                   (let [path (str inpath filename)
                         id (sha->id sha)
@@ -367,7 +324,7 @@
                                         (ffirst (d/q '[:find ?e :in $ ?filename ?id
                                                        :where [?e :node/filename ?filename] [?e :node/object ?id]]
                                                      db filenameid id)))
-                                   (d/tempid :db.part/user))
+                                   (util/tempid :db.part/user))
                         newpath (or (tempid? pathid) (tempid? nodeid)
                                     (not (ffirst (d/q '[:find ?node :in $ ?path
                                                         :where [?node :node/paths ?path]]
@@ -391,7 +348,7 @@
         [treeid treedata] (tx-data nil [tree :tree repo-name])
         tx (into treedata
                  [[:db/add repo :repo/commits cid]
-                  {:db/id (d/tempid :db.part/tx)
+                  {:db/id (util/tempid :db.part/tx)
                    :tx/commit cid
                    :tx/op :import}
                   (cond-> {:db/id cid
@@ -442,9 +399,9 @@
     (pmap commit (remove (fn [[sha _]] (imported sha)) (commits commit-name)))))
 
 
-(defn ensure-db [db-uri]
-  (let [newdb? (d/create-database db-uri)
-        conn (d/connect db-uri)]
+(defn ensure-db [client db-name]
+  (let [newdb? (d/create-database client {:db-name db-name})
+        conn (d/connect client {:db-name db-name})]
     (ensure-schema conn)
     conn))
 
@@ -455,16 +412,15 @@
   (let [db (d/db conn)
         repo
         (or (ffirst (d/q '[:find ?e :in $ ?uri :where [?e :repo/uri ?uri]] db repo-uri))
-            (let [temp (d/tempid :db.part/user)
-                  tx-ret @(d/transact conn [[:db/add temp :repo/uri repo-uri]])
-                  repo (d/resolve-tempid (d/db conn) (:tempids tx-ret) temp)]
+            (let [temp (util/tempid :db.part/user)
+                  tx-ret (d/transact conn {:tx-data [[:db/add temp :repo/uri repo-uri]]})
+                  repo (get (:tempids tx-ret) temp)]
               (println "Adding repo" repo-uri)
               repo))]
     (doseq [commit commits]
       (let [db (d/db conn)]
         (println "Importing commit:" (:sha commit))
-        (d/transact conn (commit-tx-data db repo repo-name commit))))
-    (d/request-index conn)
+        (d/transact conn {:tx-data (commit-tx-data db repo repo-name commit)})))
     (println "Import complete!")))
 
 (def analyzers [(datomic.codeq.analyzers.clj/impl)])
@@ -485,10 +441,10 @@
       (doseq [[rev aschema] (az/schemas a)]
         (when-not (srevs rev)
           (d/transact conn
-                      (conj aschema {:db/id (d/tempid :db.part/tx)
-                                     :tx/op :schema
-                                     :tx/analyzer aname
-                                     :tx/analyzerRev rev}))))
+                      {:tx-data (conj aschema {:db/id          (util/tempid :db.part/tx)
+                                               :tx/op          :schema
+                                               :tx/analyzer    aname
+                                               :tx/analyzerRev rev})})))
       (let [db (d/db conn)
             arev (az/revision a)
             ;;candidate files
@@ -508,9 +464,9 @@
         ;;find files not yet analyzed
         (doseq [f (sort (clojure.set/difference cfiles afiles))]
           ;;analyze them
-          (println "analyzing file:" f " - sha: " (:git/sha (d/entity db f)))
+          (println "analyzing file:" f " - sha: " (:git/sha (d/pull db '[:git/sha] f)))
           (let [db (d/db conn)
-                src (with-open [s (exec-stream (str "git cat-file -p " (:git/sha (d/entity db f))))]
+                src (with-open [s (exec-stream (str "git cat-file -p " (:git/sha (d/pull db '[:git/sha] f))))]
                       (slurp s))
                 adata (try
                         (az/analyze a db f src)
@@ -518,21 +474,32 @@
                           (println (.getMessage ex))
                           []))]
             (d/transact conn
-                        (conj adata {:db/id (d/tempid :db.part/tx)
-                                     :tx/op :analyze
-                                     :tx/file f
-                                     :tx/analyzer aname
-                                     :tx/analyzerRev arev})))))))
+                        {:tx-data (conj adata {:db/id          (util/tempid :db.part/tx)
+                                               :tx/op          :analyze
+                                               :tx/file        f
+                                               :tx/analyzer    aname
+                                               :tx/analyzerRev arev})}))))))
   (println "Analysis complete!"))
 
-(defn main [& [db-uri commit]]
-  (if db-uri
-      (let [conn (ensure-db db-uri)
+(defn make-client []
+  (d/client {:server-type :cloud
+             :region      (System/getenv "AWS_REGION")
+             :system      (System/getenv "DATOMIC_SYSTEM_NAME")
+             :query-group (System/getenv "DATOMIC_SYSTEM_NAME")
+             :endpoint    (format "http://entry.%s.%s.datomic.net:8182"
+                                  (System/getenv "DATOMIC_SYSTEM_NAME")
+                                  (System/getenv "AWS_REGION"))
+             :proxy-port  8182}))
+
+(defn main [& [db-name commit]]
+  (if db-name
+      (let [client (make-client)
+            conn (ensure-db client db-name)
             [repo-uri repo-name] (get-repo-uri)]
         ;;(prn repo-uri)
         (import-git conn repo-uri repo-name (unimported-commits (d/db conn) commit))
         (run-analyzers conn))
-      (println "Usage: datomic.codeq.core db-uri [commit-name]")))
+      (println "Usage: datomic.codeq.core db-name [commit-name]")))
 
 (defn -main
   [& args]
@@ -544,6 +511,64 @@
   [x y]
   {::util/foo (+ x y)})
 
+(comment
+  (datomic.codeq.core/main "codeq-test-4")
+  (def the-client (make-client))
+  (def conn (d/connect the-client {:db-name "codeq-test-4"}))
+  (def db (d/db conn))
+
+
+  (seq (d/datoms db {:index :aevt :components [:file/name]}))
+
+
+  (seq (d/datoms db {:index :aevt :components [:file/name]}))
+  (seq (d/datoms db {:index :aevt :components [:commit/message]}))
+  (seq (d/datoms db {:index :aevt :components [:tx/file]}))
+  (count (seq (d/datoms db {:index :aevt :components [:code/sha]})))
+  (take 20 (seq (d/datoms db {:index :aevt :components [:code/text]})))
+  (seq (d/datoms db {:index :aevt :components [:code/name]}))
+  (count (seq (d/datoms db {:index :aevt :components [:codeq/code]})))
+  (d/q '[:find ?e :where [?f :file/name "core.clj"] [?n :node/filename ?f] [?n :node/object ?e]] db)
+  (d/q '[:find ?m :where [_ :commit/message ?m] [(.contains ^String ?m "\n")]] db)
+  (d/q '[:find ?m :where [_ :code/text ?m] [(.contains ^String ?m "(ns ")]] db)
+
+  (sort (d/q '[:find ?f ?var ?text ?def
+               :where
+               [?cn :code/name ?var]
+               [?def :code/text ?text]
+               [?cq :clj/def ?cn]
+               [?cq :codeq/code ?def]
+               [?cq :codeq/file ?f]
+               ]
+             db))
+
+  (sort (d/q '[:find ?cq ?file+loc
+               :where
+               [?cq :codeq/file+loc ?file+loc]]
+             db))
+
+  (sort (d/q '[:find ?var ?def
+               :where
+               [?cn :code/name ?var]
+               [?cq :clj/def ?cn]
+               [?cq :codeq/code ?def]]
+             db))
+
+  (sort (d/q '[:find ?var ?def
+               :where
+               [?cn :code/name ?var]
+               [?cq :clj/ns ?cn]
+               [?cq :codeq/code ?def]]
+             db))
+
+  (sort (d/q '[:find ?var ?def ?n
+               :where
+               [?cn :code/name ?var]
+               [?cq :clj/ns ?cn]
+               [?cq :codeq/file ?f]
+               [?n :node/object ?f]
+               [?cq :codeq/code ?def]] db))
+  )
 
 (comment
 (def uri "datomic:mem://git")
@@ -551,7 +576,7 @@
 (datomic.codeq.core/main uri "c3bd979cfe65da35253b25cb62aad4271430405c")
 (datomic.codeq.core/main uri  "20f8db11804afc8c5a1752257d5fdfcc2d131d08")
 (datomic.codeq.core/main uri)
-(require '[datomic.api :as d])
+;(require '[datomic.api :as d])
 (def conn (d/connect uri))
 (def db (d/db conn))
 (seq (d/datoms db :aevt :file/name))
@@ -580,7 +605,7 @@
                     (slurp s))
                 adata (az/analyze a db s)]
             (d/transact conn
-                        (conj adata {:db/id (d/tempid :db.part/tx)
+                        (conj adata {:db/id (util/tempid :db.part/tx)
                                      :tx/op :analyze
                                      :codeq/file f
                                      :tx/analyzer aname

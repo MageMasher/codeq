@@ -1,6 +1,7 @@
 {:paths ["resources" "src"]
  :deps {org.clojure/clojure {:mvn/version "1.10.1"}
-        com.datomic/datomic-free {:mvn/version "0.9.5703.21"}
+        ;com.datomic/datomic-free {:mvn/version "0.9.5703.21"}
+        com.datomic/client-cloud {:mvn/version "0.8.96"}
         commons-codec {:mvn/version "1.14"}}
  :aliases
  {:test {:extra-paths ["test"]
