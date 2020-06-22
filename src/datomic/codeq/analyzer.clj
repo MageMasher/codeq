@@ -20,14 +20,14 @@
   (analyze [a db f src] "f is file entityid, src is string, returns tx-data"))
 
 (defn sha
-  "Returns the hex string of the sha1 of s"
+  "Returns the hex string of the sha256 of s"
   [^String s]
-  (org.apache.commons.codec.digest.DigestUtils/shaHex s))
+  (DigestUtils/sha256Hex s))
 
 (defn ws-minify
   "Consecutive ws becomes a single space, then trim"
   [s]
-  (let [r (java.io.StringReader. s)
+  (let [r (StringReader. s)
         sb (StringBuilder.)]
     (loop [c (.read r) skip true]
       (when-not (= c -1)
